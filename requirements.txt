@@ -1,10 +1,9 @@
-streamlit==1.33.0
-langchain==0.2.1
-langchain-community==0.2.1
-langchain-text-splitters==0.2.0
+streamlit
+langchain
+langchain-community
+langchain-text-splitters
+sentence-transformers
+pypdf
+huggingface_hub
 chromadb==0.4.24
-sentence-transformers==2.7.0
-pypdf==4.2.0
-faiss-cpu==1.7.4
-huggingface_hub==0.23.0
 protobuf==3.20.3

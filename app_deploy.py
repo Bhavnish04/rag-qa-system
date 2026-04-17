@@ -4,7 +4,7 @@ import os
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer, CrossEncoder
-from langchain_community.llms import HuggingFaceHub
+from huggingface_hub import InferenceClient
 import chromadb
 
 # -------------------------------
@@ -18,7 +18,6 @@ st.title("📄 RAG Document QA System")
 # -------------------------------
 with st.sidebar:
     st.header("⚙️ Settings")
-
     use_rerank = st.checkbox("Use Re-ranking", value=True)
 
     st.markdown("### Model Info")
@@ -39,9 +38,6 @@ query = st.text_input("Ask a question about your documents")
 # -------------------------------
 if st.button("Get Answer"):
 
-    # -------------------------------
-    # Edge cases
-    # -------------------------------
     if not uploaded_files:
         st.warning("Upload at least one PDF")
         st.stop()
@@ -79,8 +75,8 @@ if st.button("Get Answer"):
     # -------------------------------
     embed_model = SentenceTransformer('all-MiniLM-L6-v2')
 
-    client = chromadb.Client()
-    collection = client.create_collection("rag_docs")
+    client_db = chromadb.Client()
+    collection = client_db.create_collection("rag_docs")
 
     for i, chunk in enumerate(chunks):
         embedding = embed_model.encode(chunk.page_content).tolist()
@@ -93,7 +89,7 @@ if st.button("Get Answer"):
         )
 
     # -------------------------------
-    # Query embedding
+    # Query
     # -------------------------------
     query_embedding = embed_model.encode(query).tolist()
 
@@ -134,33 +130,26 @@ if st.button("Get Answer"):
 
         top_chunks = [chunk for chunk, score in scored_chunks[:3]]
         confidence = max(scores)
-
     else:
         top_chunks = retrieved_chunks[:3]
 
     # -------------------------------
-    # LLM (FIXED)
+    # LLM (FINAL FIX)
     # -------------------------------
     hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 
     if hf_token is None:
-        st.error("HuggingFace API token not found in secrets")
+        st.error("HuggingFace API token not found")
         st.stop()
 
-    llm = HuggingFaceHub(
-        repo_id="google/flan-t5-large",
-        huggingfacehub_api_token=hf_token,
-        model_kwargs={"temperature": 0.2, "max_length": 512}
+    hf_client = InferenceClient(
+        model="google/flan-t5-large",
+        token=hf_token
     )
 
-    # -------------------------------
-    # Generate answer
-    # -------------------------------
     context = "\n\n".join(top_chunks)
 
     prompt = f"""
-You are a precise AI assistant.
-
 Summarize clearly using ONLY the context.
 If unsure, say "I don't know".
 
@@ -173,7 +162,13 @@ Question:
 Answer:
 """
 
-    answer = llm.invoke(prompt)
+    response = hf_client.text_generation(
+        prompt,
+        max_new_tokens=300,
+        temperature=0.2
+    )
+
+    answer = response
 
     # -------------------------------
     # Output

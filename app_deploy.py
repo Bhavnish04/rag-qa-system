@@ -142,8 +142,8 @@ if st.button("Get Answer"):
     # LLM (Ollama)
     # -------------------------------
     llm = HuggingFaceHub(
-    repo_id="mistralai/Mistral-7B-Instruct-v0.2",
-    model_kwargs={"temperature": 0.2}
+    repo_id="google/flan-t5-large",
+    model_kwargs={"temperature": 0.2, "max_length": 512}
 )
 
     context = "\n\n".join(top_chunks)

@@ -22,7 +22,7 @@ with st.sidebar:
     use_rerank = st.checkbox("Use Re-ranking", value=True)
 
     st.markdown("### Model Info")
-    st.write("LLM: Mistral (Ollama)")
+    st.write("LLM: FLAN-T5 (HuggingFace)")
     st.write("Embeddings: all-MiniLM-L6-v2")
 
 # -------------------------------
@@ -139,13 +139,23 @@ if st.button("Get Answer"):
         top_chunks = retrieved_chunks[:3]
 
     # -------------------------------
-    # LLM (Ollama)
+    # LLM (FIXED)
     # -------------------------------
-    llm = HuggingFaceHub(
-    repo_id="google/flan-t5-large",
-    model_kwargs={"temperature": 0.2, "max_length": 512}
-)
+    hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 
+    if hf_token is None:
+        st.error("HuggingFace API token not found in secrets")
+        st.stop()
+
+    llm = HuggingFaceHub(
+        repo_id="google/flan-t5-large",
+        huggingfacehub_api_token=hf_token,
+        model_kwargs={"temperature": 0.2, "max_length": 512}
+    )
+
+    # -------------------------------
+    # Generate answer
+    # -------------------------------
     context = "\n\n".join(top_chunks)
 
     prompt = f"""
@@ -171,7 +181,6 @@ Answer:
     st.subheader("📌 Answer")
     st.write(answer)
 
-    # Confidence indicator
     if confidence is not None:
         if confidence > -5:
             st.success(f"High confidence ({confidence:.2f})")
@@ -180,7 +189,6 @@ Answer:
         else:
             st.error(f"Low confidence ({confidence:.2f})")
 
-    # Sources
     st.subheader("🔍 Top Retrieved Chunks")
 
     for i, chunk in enumerate(top_chunks):

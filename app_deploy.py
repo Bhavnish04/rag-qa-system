@@ -134,24 +134,18 @@ if st.button("Get Answer"):
         top_chunks = retrieved_chunks[:3]
 
     # -------------------------------
-    # LLM (FINAL FIX)
-    # -------------------------------
-    hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
+    # LLM (STABLE FINAL)
+# -------------------------------
+hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 
-    if hf_token is None:
-        st.error("HuggingFace API token not found")
-        st.stop()
+if not hf_token:
+    st.error("HuggingFace API token not found")
+    st.stop()
 
-    hf_client = InferenceClient(
-        model="google/flan-t5-large",
-        token=hf_token
-    )
+context = "\n\n".join(top_chunks)
 
-    context = "\n\n".join(top_chunks)
-
-    prompt = f"""
-Summarize clearly using ONLY the context.
-If unsure, say "I don't know".
+prompt = f"""
+Answer ONLY using the context below.
 
 Context:
 {context}
@@ -159,16 +153,47 @@ Context:
 Question:
 {query}
 
-Answer:
+Answer in 2-3 sentences:
 """
+
+try:
+    # Primary model (fast + stable)
+    hf_client = InferenceClient(
+        model="google/flan-t5-small",
+        token=hf_token,
+        timeout=30
+    )
 
     response = hf_client.text_generation(
         prompt,
-        max_new_tokens=300,
+        max_new_tokens=150,
         temperature=0.2
     )
 
     answer = response
+
+except Exception:
+    st.warning("⚠️ Primary model busy. Trying backup model...")
+
+    try:
+        # Backup model
+        fallback_client = InferenceClient(
+            model="tiiuae/falcon-rw-1b",
+            token=hf_token,
+            timeout=30
+        )
+
+        response = fallback_client.text_generation(
+            prompt,
+            max_new_tokens=150,
+            temperature=0.2
+        )
+
+        answer = response
+
+    except Exception:
+        st.error("❌ All models unavailable. Try again in a few seconds.")
+        st.stop()
 
     # -------------------------------
     # Output

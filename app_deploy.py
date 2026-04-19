@@ -114,25 +114,29 @@ if st.button("Get Answer"):
         st.error("No relevant content found")
         st.stop()
 
-    # -------------------------------
-    # Re-ranking
-    # -------------------------------
-    confidence = None
+# -------------------------------
+# Re-ranking
+# -------------------------------
+confidence = None
 
-    if use_rerank:
-        reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
+if use_rerank and len(retrieved_chunks) > 0:
+    reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
 
-        pairs = [(query, chunk) for chunk in retrieved_chunks]
-        scores = reranker.predict(pairs)
+    pairs = [(query, chunk) for chunk in retrieved_chunks]
+    scores = reranker.predict(pairs)
 
-        scored_chunks = list(zip(retrieved_chunks, scores))
-        scored_chunks = sorted(scored_chunks, key=lambda x: x[1], reverse=True)
+    scored_chunks = list(zip(retrieved_chunks, scores))
+    scored_chunks = sorted(scored_chunks, key=lambda x: x[1], reverse=True)
 
-        top_chunks = [chunk for chunk, score in scored_chunks[:3]]
-        confidence = max(scores)
-    else:
-        top_chunks = retrieved_chunks[:3]
-
+    top_chunks = [chunk for chunk, score in scored_chunks[:3]]
+    confidence = max(scores)
+else:
+    top_chunks = retrieved_chunks[:3]
+    
+    
+if not top_chunks:
+    st.error("No relevant content found after processing")
+    st.stop()
     # -------------------------------
     # LLM (STABLE FINAL)
 # -------------------------------

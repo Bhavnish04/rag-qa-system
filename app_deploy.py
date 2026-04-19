@@ -114,41 +114,42 @@ if st.button("Get Answer"):
         st.error("No relevant content found")
         st.stop()
 
-# -------------------------------
-# Re-ranking
-# -------------------------------
-confidence = None
-
-if use_rerank and len(retrieved_chunks) > 0:
-    reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
-
-    pairs = [(query, chunk) for chunk in retrieved_chunks]
-    scores = reranker.predict(pairs)
-
-    scored_chunks = list(zip(retrieved_chunks, scores))
-    scored_chunks = sorted(scored_chunks, key=lambda x: x[1], reverse=True)
-
-    top_chunks = [chunk for chunk, score in scored_chunks[:3]]
-    confidence = max(scores)
-else:
-    top_chunks = retrieved_chunks[:3]
-    
-    
-if not top_chunks:
-    st.error("No relevant content found after processing")
-    st.stop()
     # -------------------------------
-    # LLM (STABLE FINAL)
-# -------------------------------
-hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
+    # Re-ranking
+    # -------------------------------
+    # FIX 1: moved inside the button block so top_chunks is always defined
+    confidence = None
 
-if not hf_token:
-    st.error("HuggingFace API token not found")
-    st.stop()
+    if use_rerank and len(retrieved_chunks) > 0:
+        reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
 
-context = "\n\n".join(top_chunks)
+        pairs = [(query, chunk) for chunk in retrieved_chunks]
+        scores = reranker.predict(pairs)
 
-prompt = f"""
+        scored_chunks = list(zip(retrieved_chunks, scores))
+        scored_chunks = sorted(scored_chunks, key=lambda x: x[1], reverse=True)
+
+        top_chunks = [chunk for chunk, score in scored_chunks[:3]]
+        confidence = max(scores)
+    else:
+        top_chunks = retrieved_chunks[:3]
+
+    if not top_chunks:
+        st.error("No relevant content found after processing")
+        st.stop()
+
+    # -------------------------------
+    # LLM
+    # -------------------------------
+    hf_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
+
+    if not hf_token:
+        st.error("HuggingFace API token not found")
+        st.stop()
+
+    context = "\n\n".join(top_chunks)
+
+    prompt = f"""
 Answer ONLY using the context below.
 
 Context:
@@ -160,34 +161,17 @@ Question:
 Answer in 2-3 sentences:
 """
 
-try:
-    # Primary model (fast + stable)
-    hf_client = InferenceClient(
-        model="google/flan-t5-small",
-        token=hf_token,
-        timeout=30
-    )
-
-    response = hf_client.text_generation(
-        prompt,
-        max_new_tokens=150,
-        temperature=0.2
-    )
-
-    answer = response
-
-except Exception:
-    st.warning("⚠️ Primary model busy. Trying backup model...")
+    answer = None
 
     try:
-        # Backup model
-        fallback_client = InferenceClient(
-            model="tiiuae/falcon-rw-1b",
+        # Primary model (fast + stable)
+        hf_client = InferenceClient(
+            model="google/flan-t5-small",
             token=hf_token,
             timeout=30
         )
 
-        response = fallback_client.text_generation(
+        response = hf_client.text_generation(
             prompt,
             max_new_tokens=150,
             temperature=0.2
@@ -196,12 +180,32 @@ except Exception:
         answer = response
 
     except Exception:
-        st.error("❌ All models unavailable. Try again in a few seconds.")
-        st.stop()
+        st.warning("⚠️ Primary model busy. Trying backup model...")
+
+        try:
+            # Backup model
+            fallback_client = InferenceClient(
+                model="tiiuae/falcon-rw-1b",
+                token=hf_token,
+                timeout=30
+            )
+
+            response = fallback_client.text_generation(
+                prompt,
+                max_new_tokens=150,
+                temperature=0.2
+            )
+
+            answer = response
+
+        except Exception:
+            st.error("❌ All models unavailable. Try again in a few seconds.")
+            st.stop()
 
     # -------------------------------
     # Output
     # -------------------------------
+    # FIX 2: moved outside the except block so it always runs on success
     st.subheader("📌 Answer")
     st.write(answer)
 

@@ -76,7 +76,7 @@ if st.button("Get Answer"):
     embed_model = SentenceTransformer('all-MiniLM-L6-v2')
 
     client_db = chromadb.Client()
-    collection = client_db.create_collection("rag_docs")
+    collection = client_db.get_or_create_collection("rag_docs")
 
     for i, chunk in enumerate(chunks):
         embedding = embed_model.encode(chunk.page_content).tolist()

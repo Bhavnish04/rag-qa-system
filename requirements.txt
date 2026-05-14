@@ -1,0 +1,11 @@
+#huggingface_hub==0.22.2
+streamlit
+langchain
+langchain-community
+langchain-text-splitters
+sentence-transformers
+chromadb==0.4.22
+
+pypdf
+langchain-ollama
+protobuf==3.20.3

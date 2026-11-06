@@ -39,7 +39,8 @@ PDF manuals ─► chunks ─► multilingual embeddings ─► vector search (t
 |---|---|
 | UI | Streamlit |
 | Embeddings | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` |
-| Re-ranking | Cross-encoder (sentence-transformers) |
+| Re-ranking | Multilingual cross-encoder `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1` |
+| Vector store | ChromaDB (in-memory) |
 | LLM | GPT-OSS 120B via Groq API |
 | PDF parsing / chunking | LangChain |
 
@@ -54,7 +55,9 @@ pip install -r requirements.txt
 streamlit run app_groq.py
 ```
 
-Enter your Groq API key in the sidebar (get one at console.groq.com). Then select the bundled manuals or upload your own PDFs and ask a question.
+Enter your Groq API key in the sidebar (get one at console.groq.com), or set it as the `GROQ_API_KEY` environment variable. Then upload your own PDFs and ask a question.
+
+To get the pre-loaded selector, put your own manuals (`.pdf` or `.txt`) into `data/manuals/`. The manuals used in the demo are not included in this repo.
 
 ## Evaluation
 

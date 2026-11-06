@@ -4,7 +4,7 @@ Ask questions about PDF product manuals in **German, English or French** and get
 
 Built as a case study for technical product documentation (e.g. warehouse equipment manuals), where the person asking often doesn't speak the language the manual is written in.
 
-![App screenshot](docs/Screenshot%202026-08-18%20203601.png)
+![App screenshot](docs/app_screenshot.png)
 
 ## Example
 
